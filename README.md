@@ -73,8 +73,6 @@ docker run -d -p 8000:8000 -v ./data:/app/data -v ./config:/app/config guax
 创建 `docker-compose.yml` 文件：
 
 ```yaml
-version: '3.8'
-
 services:
   guax:
     build: .
@@ -87,6 +85,7 @@ services:
       - ./data:/app/data
       - ./config:/app/config
       - ./logs:/app/logs
+      - /volume1/media:/media:ro   # 可选：挂载影视库（只读），按需调整
     environment:
       - TZ=Asia/Shanghai
 ```
@@ -105,6 +104,39 @@ docker compose down
 
 # 重新构建并启动
 docker compose up -d --build
+```
+
+#### NAS 离线部署（打包镜像导入）
+
+适用场景：NAS 无法访问 Docker Hub，或网络拉镜像失败。
+
+**1. 在能联网的机器上打包：**
+
+```bash
+# Linux / macOS
+./build-image.sh
+
+# Windows
+build-image.bat
+```
+
+执行后会生成 `guax-latest.tar` 镜像文件。
+
+**2. 把 `guax-latest.tar` 传到 NAS**（通过 SMB、网盘、scp 都可以）。
+
+**3. 在 NAS 上加载镜像并启动：**
+
+```bash
+cd /data/Docker/guax   # 或你的项目目录
+
+# 加载镜像
+docker load -i guax-latest.tar
+
+# 启动
+docker compose up -d
+
+# 查看
+docker compose logs -f
 ```
 
 ## 项目结构

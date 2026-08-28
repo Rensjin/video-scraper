@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   guax:
     build: .
@@ -12,5 +10,6 @@ services:
       - ./data:/app/data
       - ./config:/app/config
       - ./logs:/app/logs
+      - /volume1/media:/media:ro   # 可选：挂载影视库（只读），按需调整
     environment:
       - TZ=Asia/Shanghai
