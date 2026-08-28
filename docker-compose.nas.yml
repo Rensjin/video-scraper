@@ -1,0 +1,13 @@
+services:
+  guax:
+    image: guax:latest
+    container_name: guax
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data:/app/data
+      - ./config:/app/config
+      - ./logs:/app/logs
+    environment:
+      - TZ=Asia/Shanghai
