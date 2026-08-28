@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Guax - 本地视频元数据刮削工具</title>
+    <link rel="stylesheet" href="https://unpkg.com/element-plus@2.8.4/dist/index.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; background: #f5f5f5; }
+        #app { min-height: 100vh; }
+        
+        /* 布局 */
+        .layout { display: flex; min-height: 100vh; }
+        .sidebar { width: 220px; background: #1a1a2e; color: #fff; padding: 20px 0; }
+        .main { flex: 1; padding: 20px; overflow-y: auto; }
+        
+        /* Logo */
+        .logo { text-align: center; padding: 20px; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .logo h1 { font-size: 24px; color: #ff6b6b; }
+        .logo p { font-size: 12px; color: #888; margin-top: 5px; }
+        
+        /* 菜单 */
+        .menu { margin-top: 20px; }
+        .menu-item { padding: 12px 20px; cursor: pointer; transition: all 0.3s; display: flex; align-items: center; gap: 10px; }
+        .menu-item:hover { background: rgba(255,255,255,0.1); }
+        .menu-item.active { background: #ff6b6b; color: #fff; }
+        .menu-item svg { width: 20px; height: 20px; }
+        
+        /* 内容区域 */
+        .content { background: #fff; border-radius: 8px; padding: 24px; min-height: calc(100vh - 40px); }
+        .page-title { font-size: 24px; font-weight: 600; margin-bottom: 20px; color: #333; }
+        
+        /* 搜索框 */
+        .search-box { display: flex; gap: 10px; margin-bottom: 20px; }
+        .search-box input { flex: 1; padding: 12px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; }
+        .search-box button { padding: 12px 24px; background: #ff6b6b; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; }
+        .search-box button:hover { background: #ff5252; }
+        
+        /* 刮削源选择 */
+        .source-select { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+        .source-tag { padding: 6px 12px; border: 1px solid #ddd; border-radius: 4px; cursor: pointer; transition: all 0.3s; }
+        .source-tag.active { background: #ff6b6b; color: #fff; border-color: #ff6b6b; }
+        
+        /* 结果卡片 */
+        .result-card { border: 1px solid #eee; border-radius: 8px; padding: 20px; margin-bottom: 20px; }
+        .result-header { display: flex; gap: 20px; }
+        .result-poster { width: 150px; height: 200px; background: #f0f0f0; border-radius: 4px; overflow: hidden; }
+        .result-poster img { width: 100%; height: 100%; object-fit: cover; }
+        .result-info { flex: 1; }
+        .result-title { font-size: 18px; font-weight: 600; color: #333; margin-bottom: 8px; }
+        .result-meta { font-size: 14px; color: #666; margin-bottom: 4px; }
+        .result-tags { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+        .result-tag { padding: 4px 8px; background: #f0f0f0; border-radius: 4px; font-size: 12px; }
+        
+        /* 加载状态 */
+        .loading { text-align: center; padding: 40px; color: #999; }
+        .error { padding: 20px; background: #fff2f0; border: 1px solid #ffccc7; border-radius: 4px; color: #ff4d4f; }
+        
+        /* 标签页 */
+        .tabs { margin-bottom: 20px; border-bottom: 1px solid #eee; display: flex; gap: 20px; }
+        .tab { padding: 12px 0; cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.3s; }
+        .tab.active { border-color: #ff6b6b; color: #ff6b6b; }
+        
+        /* 表格 */
+        .table { width: 100%; border-collapse: collapse; }
+        .table th, .table td { padding: 12px; text-align: left; border-bottom: 1px solid #eee; }
+        .table th { background: #fafafa; font-weight: 600; }
+        .table tr:hover { background: #fafafa; }
+        
+        /* 按钮 */
+        .btn { padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; transition: all 0.3s; }
+        .btn-primary { background: #ff6b6b; color: #fff; }
+        .btn-primary:hover { background: #ff5252; }
+        .btn-default { background: #f0f0f0; color: #333; }
+        .btn-default:hover { background: #e0e0e0; }
+        
+        /* 解析结果 */
+        .parse-result { background: #fafafa; border-radius: 8px; padding: 20px; margin-bottom: 20px; }
+        .parse-item { display: flex; padding: 8px 0; border-bottom: 1px solid #eee; }
+        .parse-item:last-child { border-bottom: none; }
+        .parse-label { width: 100px; color: #666; }
+        .parse-value { flex: 1; color: #333; font-weight: 500; }
+        
+        /* 空状态 */
+        .empty { text-align: center; padding: 60px 20px; color: #999; }
+        .empty svg { width: 80px; height: 80px; margin-bottom: 20px; opacity: 0.5; }
+        
+        /* 响应式 */
+        @media (max-width: 768px) {
+            .sidebar { width: 60px; }
+            .logo h1 { display: none; }
+            .menu-item span { display: none; }
+            .layout { flex-direction: column; }
+            .sidebar { width: 100%; height: auto; display: flex; overflow-x: auto; }
+            .menu { display: flex; margin: 0; }
+            .menu-item { padding: 10px; }
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div class="layout">
+            <!-- 侧边栏 -->
+            <div class="sidebar">
+                <div class="logo">
+                    <h1>Guax</h1>
+                    <p>本地视频元数据刮削工具</p>
+                    <p style="font-size: 11px; margin-top: 8px; color: #666;">基于 Amane 二创</p>
+                </div>
+                <div class="menu">
+                    <div class="menu-item" :class="{active: currentTab === 'scrape'}" @click="currentTab = 'scrape'">
+                        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M15.5 14h-.79l-.28-.27a6.5 6.5 0 0 0 1.48-5.34c-.47-2.78-2.79-5-5.59-5.34a6.505 6.505 0 0 0-7.27 7.27c.34 2.8 2.56 5.12 5.34 5.59a6.5 6.5 0 0 0 5.34-1.48l.27.28v.79l4.25 4.25c.41.41 1.08.41 1.49 0 .41-.41.41-1.08 0-1.49L15.5 14zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+                        <span>刮削</span>
+                    </div>
+                    <div class="menu-item" :class="{active: currentTab === 'library'}" @click="currentTab = 'library'">
+                        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-1 9H9V9h10v2zm-4 4H9v-2h6v2zm4-8H9V5h10v2z"/></svg>
+                        <span>媒体库</span>
+                    </div>
+                    <div class="menu-item" :class="{active: currentTab === 'sources'}" @click="currentTab = 'sources'">
+                        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM14 13v4h-4v-4H7l5-5 5 5h-3z"/></svg>
+                        <span>刮削源</span>
+                    </div>
+                    <div class="menu-item" :class="{active: currentTab === 'parse'}" @click="currentTab = 'parse'">
+                        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
+                        <span>文件名解析</span>
+                    </div>
+                    <div class="menu-item" :class="{active: currentTab === 'settings'}" @click="currentTab = 'settings'">
+                        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19.14 12.94c.04-.31.06-.63.06-.94 0-.31-.02-.63-.06-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.49.49 0 0 0-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.484.484 0 0 0-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.04.31-.06.63-.06.94s.02.63.06.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
+                        <span>设置</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 主内容 -->
+            <div class="main">
+                <div class="content">
+                    <!-- 刮削页面 -->
+                    <div v-if="currentTab === 'scrape'">
+                        <h2 class="page-title">刮削媒体</h2>
+                        
+                        <div class="source-select">
+                            <span style="margin-right: 10px; color: #666;">刮削源:</span>
+                            <span 
+                                v-for="source in sources" 
+                                :key="source.name"
+                                class="source-tag"
+                                :class="{active: selectedSources.includes(source.name)}"
+                                @click="toggleSource(source.name)"
+                            >
+                                {{ source.display_name }}
+                            </span>
+                        </div>
+                        
+                        <div class="search-box">
+                            <input 
+                                type="text" 
+                                v-model="searchQuery" 
+                                placeholder="输入番号或标题进行刮削，如 MD-001, SWAG-001..."
+                                @keyup.enter="doScrape"
+                            >
+                            <button @click="doScrape" :disabled="scrapeLoading">
+                                {{ scrapeLoading ? '刮削中...' : '刮削' }}
+                            </button>
+                        </div>
+                        
+                        <div v-if="scrapeLoading" class="loading">
+                            正在刮削，请稍候...
+                        </div>
+                        
+                        <div v-else-if="scrapeError" class="error">
+                            {{ scrapeError }}
+                        </div>
+                        
+                        <div v-else-if="scrapeResult" class="result-card">
+                            <div class="result-header">
+                                <div class="result-poster">
+                                    <img v-if="scrapeResult.poster_url" :src="scrapeResult.poster_url" alt="海报">
+                                    <div v-else style="display:flex;align-items:center;justify-content:center;height:100%;color:#999;">无海报</div>
+                                </div>
+                                <div class="result-info">
+                                    <div class="result-title">{{ scrapeResult.title }}</div>
+                                    <div class="result-meta" v-if="scrapeResult.source_code">番号: {{ scrapeResult.source_code }}</div>
+                                    <div class="result-meta" v-if="scrapeResult.studio || scrapeResult.studio_zh">片商: {{ scrapeResult.studio_zh || scrapeResult.studio }}</div>
+                                    <div class="result-meta" v-if="scrapeResult.release_date">发行日期: {{ scrapeResult.release_date }}</div>
+                                    <div class="result-meta" v-if="scrapeResult.runtime">时长: {{ scrapeResult.runtime_str || scrapeResult.runtime + '分钟' }}</div>
+                                    <div class="result-meta" v-if="scrapeResult.rating">评分: {{ scrapeResult.rating }}</div>
+                                    <div class="result-tags">
+                                        <span class="result-tag" v-for="genre in scrapeResult.genres" :key="genre">{{ genre }}</span>
+                                    </div>
+                                    <div class="result-meta" v-if="scrapeResult.actors && scrapeResult.actors.length" style="margin-top:12px">
+                                        演员: {{ scrapeResult.actors.join(', ') }}
+                                    </div>
+                                </div>
+                            </div>
+                            <div v-if="scrapeResult.plot" style="margin-top:16px;color:#666;font-size:14px;line-height:1.6">
+                                {{ scrapeResult.plot }}
+                            </div>
+                            <div style="margin-top:16px">
+                                <button class="btn btn-primary" @click="saveToLibrary">保存到媒体库</button>
+                                <button class="btn btn-default" @click="generateNfo">生成 NFO</button>
+                            </div>
+                        </div>
+                        
+                        <div v-else-if="!scrapeLoading && searchQuery" class="empty">
+                            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+                            <p>未找到匹配结果</p>
+                            <p style="font-size:12px;margin-top:8px">尝试其他关键词或检查文件名格式</p>
+                        </div>
+                    </div>
+                    
+                    <!-- 媒体库页面 -->
+                    <div v-else-if="currentTab === 'library'">
+                        <h2 class="page-title">媒体库</h2>
+                        
+                        <div class="search-box">
+                            <input type="text" v-model="librarySearch" placeholder="搜索媒体库...">
+                            <button @click="loadLibrary">搜索</button>
+                        </div>
+                        
+                        <table class="table" v-if="libraryItems.length">
+                            <thead>
+                                <tr>
+                                    <th>标题</th>
+                                    <th>番号</th>
+                                    <th>片商</th>
+                                    <th>年份</th>
+                                    <th>刮削源</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="item in libraryItems" :key="item.id">
+                                    <td>{{ item.title }}</td>
+                                    <td>{{ item.source_id || '-' }}</td>
+                                    <td>{{ item.studio_zh || item.studio || '-' }}</td>
+                                    <td>{{ item.year || '-' }}</td>
+                                    <td>{{ item.source || '-' }}</td>
+                                    <td>
+                                        <button class="btn btn-default" @click="editItem(item)">编辑</button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        
+                        <div v-else class="empty">
+                            <p>媒体库为空</p>
+                        </div>
+                    </div>
+                    
+                    <!-- 刮削源页面 -->
+                    <div v-else-if="currentTab === 'sources'">
+                        <h2 class="page-title">刮削源管理</h2>
+                        
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>名称</th>
+                                    <th>显示名称</th>
+                                    <th>优先级</th>
+                                    <th>状态</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="source in sources" :key="source.name">
+                                    <td>{{ source.name }}</td>
+                                    <td>{{ source.display_name }}</td>
+                                    <td>{{ source.priority }}</td>
+                                    <td>{{ source.enabled ? '已启用' : '已禁用' }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <!-- 文件名解析页面 -->
+                    <div v-else-if="currentTab === 'parse'">
+                        <h2 class="page-title">文件名解析</h2>
+                        
+                        <div class="search-box">
+                            <input 
+                                type="text" 
+                                v-model="parseQuery" 
+                                placeholder="输入文件名进行解析，如 MD-001-高清.mp4, SWAG-123-剧情篇.mkv..."
+                                @keyup.enter="doParse"
+                            >
+                            <button @click="doParse">解析</button>
+                        </div>
+                        
+                        <div v-if="parseResult" class="parse-result">
+                            <div class="parse-item">
+                                <div class="parse-label">原始文件名</div>
+                                <div class="parse-value">{{ parseResult.original }}</div>
+                            </div>
+                            <div class="parse-item">
+                                <div class="parse-label">番号</div>
+                                <div class="parse-value">{{ parseResult.code || '未识别' }}</div>
+                            </div>
+                            <div class="parse-item">
+                                <div class="parse-label">平台</div>
+                                <div class="parse-value">{{ parseResult.platform || '未识别' }}</div>
+                            </div>
+                            <div class="parse-item">
+                                <div class="parse-label">中文标题</div>
+                                <div class="parse-value">{{ parseResult.title || '未识别' }}</div>
+                            </div>
+                            <div class="parse-item">
+                                <div class="parse-label">年份</div>
+                                <div class="parse-value">{{ parseResult.year || '未识别' }}</div>
+                            </div>
+                            <div class="parse-item">
+                                <div class="parse-label">集数</div>
+                                <div class="parse-value">{{ parseResult.part || '无' }}</div>
+                            </div>
+                            <div class="parse-item">
+                                <div class="parse-label">演员</div>
+                                <div class="parse-value">{{ parseResult.actors && parseResult.actors.length ? parseResult.actors.join(', ') : '未识别' }}</div>
+                            </div>
+                            <div class="parse-item">
+                                <div class="parse-label">置信度</div>
+                                <div class="parse-value">{{ (parseResult.confidence * 100).toFixed(1) }}%</div>
+                            </div>
+                            <div class="parse-item">
+                                <div class="parse-label">解析状态</div>
+                                <div class="parse-value" :style="{color: parseResult.is_valid ? '#52c41a' : '#ff4d4f'}">
+                                    {{ parseResult.is_valid ? '解析成功' : '解析失败' }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 设置页面 -->
+                    <div v-else-if="currentTab === 'settings'">
+                        <h2 class="page-title">系统设置</h2>
+                        
+                        <div class="parse-result">
+                            <div class="parse-item">
+                                <div class="parse-label">应用名称</div>
+                                <div class="parse-value">{{ systemInfo.name }}</div>
+                            </div>
+                            <div class="parse-item">
+                                <div class="parse-label">版本</div>
+                                <div class="parse-value">{{ systemInfo.version }}</div>
+                            </div>
+                            <div class="parse-item">
+                                <div class="parse-label">启用刮削源</div>
+                                <div class="parse-value">{{ enabledSources.join(', ') }}</div>
+                            </div>
+                        </div>
+                        
+                        <div style="margin-top: 20px">
+                            <h3 style="margin-bottom: 12px">支持的番号格式</h3>
+                            <div style="display: flex; flex-wrap: wrap; gap: 8px">
+                                <span class="result-tag" style="background: #fff1f0; border: 1px solid #ffccc7">MD-xxx (MDB 系列)</span>
+                                <span class="result-tag" style="background: #fff1f0; border: 1px solid #ffccc7">SWAG-xxx</span>
+                                <span class="result-tag" style="background: #fff1f0; border: 1px solid #ffccc7">91xxx</span>
+                                <span class="result-tag" style="background: #fff1f0; border: 1px solid #ffccc7">MDB-xxx</span>
+                                <span class="result-tag" style="background: #fff1f0; border: 1px solid #ffccc7">XS-xxx</span>
+                                <span class="result-tag" style="background: #fff1f0; border: 1px solid #ffccc7">NnUU-xxx</span>
+                                <span class="result-tag" style="background: #fff1f0; border: 1px solid #ffccc7">HEYZO-xxx</span>
+                                <span class="result-tag" style="background: #fff1f0; border: 1px solid #ffccc7">Tokyo-Hot-xxx</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://unpkg.com/vue@3.4.21/dist/vue.global.js"></script>
+    <script>
+        const { createApp, ref, onMounted } = Vue;
+        
+        createApp({
+            setup() {
+                const currentTab = ref('scrape');
+                const searchQuery = ref('');
+                const selectedSources = ref(['javdb', 'xht']);
+                const scrapeLoading = ref(false);
+                const scrapeError = ref('');
+                const scrapeResult = ref(null);
+                const sources = ref([]);
+                const libraryItems = ref([]);
+                const librarySearch = ref('');
+                const parseQuery = ref('');
+                const parseResult = ref(null);
+                const systemInfo = ref({ name: 'Guax', version: '0.1.0' });
+                const enabledSources = ref(['javdb', 'xht']);
+                
+                const apiGet = async (url) => {
+                    const resp = await fetch(url);
+                    return resp.json();
+                };
+                
+                const apiPost = async (url, data) => {
+                    const resp = await fetch(url, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                        body: new URLSearchParams(data)
+                    });
+                    return resp.json();
+                };
+                
+                const toggleSource = (name) => {
+                    const idx = selectedSources.value.indexOf(name);
+                    if (idx >= 0) {
+                        selectedSources.value.splice(idx, 1);
+                    } else {
+                        selectedSources.value.push(name);
+                    }
+                };
+                
+                const doScrape = async () => {
+                    if (!searchQuery.value) return;
+                    
+                    scrapeLoading.value = true;
+                    scrapeError.value = '';
+                    scrapeResult.value = null;
+                    
+                    try {
+                        const data = {
+                            query: searchQuery.value,
+                            source: selectedSources.value.join(',')
+                        };
+                        const result = await apiPost('/api/scrape', data);
+                        
+                        if (result.success) {
+                            scrapeResult.value = result.data;
+                        } else {
+                            scrapeError.value = result.error || '刮削失败';
+                        }
+                    } catch (e) {
+                        scrapeError.value = '请求失败: ' + e.message;
+                    } finally {
+                        scrapeLoading.value = false;
+                    }
+                };
+                
+                const doParse = async () => {
+                    if (!parseQuery.value) return;
+                    
+                    try {
+                        const data = { filename: parseQuery.value };
+                        const result = await apiPost('/api/parse/filename', data);
+                        
+                        if (result.success) {
+                            parseResult.value = result.data;
+                        }
+                    } catch (e) {
+                        console.error('解析失败:', e);
+                    }
+                };
+                
+                const loadLibrary = async () => {
+                    try {
+                        const result = await apiGet('/api/library/');
+                        if (result.success) {
+                            libraryItems.value = result.data;
+                        }
+                    } catch (e) {
+                        console.error('加载媒体库失败:', e);
+                    }
+                };
+                
+                const saveToLibrary = () => {
+                    if (!scrapeResult.value) return;
+                    alert('保存功能开发中...');
+                };
+                
+                const generateNfo = () => {
+                    if (!scrapeResult.value) return;
+                    alert('NFO 生成功能开发中...');
+                };
+                
+                const editItem = (item) => {
+                    alert('编辑功能开发中...');
+                };
+                
+                onMounted(async () => {
+                    // 加载刮削源列表
+                    try {
+                        const result = await apiGet('/api/sources');
+                        if (result.success) {
+                            sources.value = result.data;
+                        }
+                    } catch (e) {
+                        console.error('加载刮削源失败:', e);
+                    }
+                    
+                    // 加载媒体库
+                    loadLibrary();
+                });
+                
+                return {
+                    currentTab,
+                    searchQuery,
+                    selectedSources,
+                    scrapeLoading,
+                    scrapeError,
+                    scrapeResult,
+                    sources,
+                    libraryItems,
+                    librarySearch,
+                    parseQuery,
+                    parseResult,
+                    systemInfo,
+                    enabledSources,
+                    toggleSource,
+                    doScrape,
+                    doParse,
+                    loadLibrary,
+                    saveToLibrary,
+                    generateNfo,
+                    editItem
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>

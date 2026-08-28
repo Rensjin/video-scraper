@@ -1,0 +1,57 @@
+# Guax 配置
+
+app:
+  name: "Guax"
+  host: "0.0.0.0"
+  port: 8000
+  debug: false
+  language: "zh_CN"
+
+database:
+  url: "sqlite:///data/guax.db"
+  echo: false
+
+media:
+  base_path: "./media"
+  nfo_template: "kodi"
+  poster_suffix: "-poster.jpg"
+  backdrop_suffix: "-backdrop.jpg"
+  fanart_suffix: "-fanart.jpg"
+  output_structure: "{title}/"
+
+scraper:
+  enabled_sources:
+    - "filename"
+    - "javdb"
+    - "xht"
+  timeout: 30
+  retry_times: 3
+  cache_ttl: 604800  # 7天
+
+filename_parser:
+  enabled_patterns:
+    - "md"
+    - "mdb"
+    - "swag"
+    - "91"
+    - "xs"
+    - "sq"
+    - "sg"
+    - "nnuu"
+    - "heyzo"
+    - "tokyo-hot"
+  custom_patterns: []
+
+javdb:
+  base_url: "https://javdb.com"
+  timeout: 30
+  proxies: null
+
+xht:
+  base_url: "https://xinghuaren.com"
+  timeout: 30
+  proxies: null
+
+logging:
+  level: "INFO"
+  file: "logs/guax.log"
