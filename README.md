@@ -61,21 +61,20 @@ uvicorn guax.web.app:app --reload --port 8000
 
 ### Docker 部署
 
-#### 使用 docker run
+#### 方式一：本地构建
 
 ```bash
 docker build -t guax .
 docker run -d -p 8000:8000 -v ./data:/app/data -v ./config:/app/config guax
 ```
 
-#### 使用 Docker Compose
+#### 方式二：使用 Docker Compose
 
-创建 `docker-compose.yml` 文件：
+`docker-compose.yml`：
 
 ```yaml
 services:
   guax:
-    build: .
     image: guax:latest
     container_name: guax
     restart: unless-stopped
@@ -85,7 +84,6 @@ services:
       - ./data:/app/data
       - ./config:/app/config
       - ./logs:/app/logs
-      - /volume1/media:/media:ro   # 可选：挂载影视库（只读），按需调整
     environment:
       - TZ=Asia/Shanghai
 ```
@@ -101,43 +99,37 @@ docker compose logs -f
 
 # 停止
 docker compose down
-
-# 重新构建并启动
-docker compose up -d --build
 ```
 
-#### NAS 离线部署（打包镜像导入）
+#### 方式三：NAS 镜像导入（推荐用于无公网环境）
 
-适用场景：NAS 无法访问 Docker Hub，或网络拉镜像失败。
+适用于绿联/极空间等 NAS，以及内网/无法拉取 Docker Hub 镜像的环境。
 
-**1. 在能联网的机器上打包：**
+**1. 在有 Docker 的机器上构建并导出镜像**
 
 ```bash
-# Linux / macOS
-./build-image.sh
+# 构建镜像
+docker build -t guax:latest .
 
-# Windows
-build-image.bat
+# 导出为 tar 文件
+docker save -o guax-latest.tar guax:latest
 ```
 
-执行后会生成 `guax-latest.tar` 镜像文件。
+**2. 把以下文件传到 NAS：**
+- `guax-latest.tar`（镜像包）
+- `docker-compose.yml`
 
-**2. 把 `guax-latest.tar` 传到 NAS**（通过 SMB、网盘、scp 都可以）。
-
-**3. 在 NAS 上加载镜像并启动：**
+**3. 在 NAS 上导入并启动**
 
 ```bash
-cd /data/Docker/guax   # 或你的项目目录
-
-# 加载镜像
+# 导入镜像
 docker load -i guax-latest.tar
 
 # 启动
 docker compose up -d
-
-# 查看
-docker compose logs -f
 ```
+
+> 极空间用户也可直接在 Docker 管理界面选择「导入镜像」上传 tar 文件。
 
 ## 项目结构
 
@@ -153,11 +145,11 @@ guax/
 │   │   └── models.py         # 数据模型
 │   ├── scrapers/             # 刮削源
 │   │   ├── base.py           # 基类
-│   │   ├── javdb.py          # JavDB
-│   │   ├── xht.py            # XHT数据源
+│   │   ├── source_a.py       # 数据源 A
+│   │   ├── source_b.py       # 数据源 B
 │   │   └── manager.py        # 管理器
 │   ├── parsers/              # 解析器
-│   │   └── chinese_adult.py  # 国产视频解析
+│   │   └── filename_parser.py  # 文件名解析
 │   ├── metadata/             # 元数据
 │   │   └── generator.py      # NFO生成器
 │   ├── api/                  # API路由
