@@ -1,5 +1,6 @@
 services:
   guax:
+    build: .
     image: guax:latest
     container_name: guax
     restart: unless-stopped

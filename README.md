@@ -61,20 +61,23 @@ uvicorn guax.web.app:app --reload --port 8000
 
 ### Docker 部署
 
-#### 方式一：本地构建
+#### 使用 docker run
 
 ```bash
 docker build -t guax .
 docker run -d -p 8000:8000 -v ./data:/app/data -v ./config:/app/config guax
 ```
 
-#### 方式二：使用 Docker Compose
+#### 使用 Docker Compose
 
-`docker-compose.yml`：
+创建 `docker-compose.yml` 文件：
 
 ```yaml
+version: '3.8'
+
 services:
   guax:
+    build: .
     image: guax:latest
     container_name: guax
     restart: unless-stopped
@@ -99,37 +102,10 @@ docker compose logs -f
 
 # 停止
 docker compose down
+
+# 重新构建并启动
+docker compose up -d --build
 ```
-
-#### 方式三：NAS 镜像导入（推荐用于无公网环境）
-
-适用于绿联/极空间等 NAS，以及内网/无法拉取 Docker Hub 镜像的环境。
-
-**1. 在有 Docker 的机器上构建并导出镜像**
-
-```bash
-# 构建镜像
-docker build -t guax:latest .
-
-# 导出为 tar 文件
-docker save -o guax-latest.tar guax:latest
-```
-
-**2. 把以下文件传到 NAS：**
-- `guax-latest.tar`（镜像包）
-- `docker-compose.yml`
-
-**3. 在 NAS 上导入并启动**
-
-```bash
-# 导入镜像
-docker load -i guax-latest.tar
-
-# 启动
-docker compose up -d
-```
-
-> 极空间用户也可直接在 Docker 管理界面选择「导入镜像」上传 tar 文件。
 
 ## 项目结构
 
@@ -145,11 +121,11 @@ guax/
 │   │   └── models.py         # 数据模型
 │   ├── scrapers/             # 刮削源
 │   │   ├── base.py           # 基类
-│   │   ├── source_a.py       # 数据源 A
-│   │   ├── source_b.py       # 数据源 B
+│   │   ├── javdb.py          # JavDB
+│   │   ├── xht.py            # XHT数据源
 │   │   └── manager.py        # 管理器
 │   ├── parsers/              # 解析器
-│   │   └── filename_parser.py  # 文件名解析
+│   │   └── chinese_adult.py  # 国产视频解析
 │   ├── metadata/             # 元数据
 │   │   └── generator.py      # NFO生成器
 │   ├── api/                  # API路由
