@@ -28,14 +28,9 @@ jobs:
           docker save -o guax-image.tar guax:latest
           ls -lh guax-image.tar
 
-      - name: Compress image
-        run: |
-          gzip -f guax-image.tar
-          ls -lh guax-image.tar.gz
-
       - name: Upload image artifact
         uses: actions/upload-artifact@v4
         with:
-          name: guax-image
-          path: guax-image.tar.gz
+          name: guax-image-tar
+          path: guax-image.tar
           retention-days: 14
