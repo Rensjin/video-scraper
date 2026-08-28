@@ -61,9 +61,50 @@ uvicorn guax.web.app:app --reload --port 8000
 
 ### Docker 部署
 
+#### 使用 docker run
+
 ```bash
 docker build -t guax .
 docker run -d -p 8000:8000 -v ./data:/app/data -v ./config:/app/config guax
+```
+
+#### 使用 Docker Compose
+
+创建 `docker-compose.yml` 文件：
+
+```yaml
+version: '3.8'
+
+services:
+  guax:
+    build: .
+    image: guax:latest
+    container_name: guax
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data:/app/data
+      - ./config:/app/config
+      - ./logs:/app/logs
+    environment:
+      - TZ=Asia/Shanghai
+```
+
+启动服务：
+
+```bash
+# 启动
+docker compose up -d
+
+# 查看日志
+docker compose logs -f
+
+# 停止
+docker compose down
+
+# 重新构建并启动
+docker compose up -d --build
 ```
 
 ## 项目结构
@@ -150,7 +191,6 @@ if metadata:
 ## 致谢
 
 - [Amane](https://github.com/sqzw-x/amane) - 本项目的二创来源，AI 时代的私人影库
-- [JavDB](https://javdb.com/) - 优秀的日本视频数据库
 - 所有开源项目的贡献者
 
 ## License
